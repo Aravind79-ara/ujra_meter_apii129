@@ -1,3 +1,4 @@
+
 # Flock Energy - Urja Meter Ops API
 
 This repository provides a small read-only FastAPI adapter and React operations console for the legacy Urja Meter Ops portal. It keeps the portal session server-side, normalizes verified HTML surfaces, and exposes a clean versioned API to the browser.
