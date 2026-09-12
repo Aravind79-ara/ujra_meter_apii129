@@ -60,15 +60,3 @@ class HealthResponse(BaseModel):
     upstream: str
 
 
-class SessionResponse(BaseModel):
-    authenticated: bool
-    message: str
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-class RegisterRequest(LoginRequest):
-    display_name: str = "Operations user"

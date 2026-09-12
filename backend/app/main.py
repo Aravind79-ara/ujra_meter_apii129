@@ -11,12 +11,11 @@ from fastapi.responses import JSONResponse
 from app.client import PortalError, UrjaPortalClient
 from app.core.config import get_settings
 from app.demo_data import DEMO_HIERARCHY, DEMO_METERS, demo_consumption
-from app.models import Consumption, ErrorResponse, HealthResponse, HierarchyResponse, LoginRequest, Meter, MeterList, RegisterRequest, SessionResponse
+from app.models import Consumption, ErrorResponse, HealthResponse, HierarchyResponse, Meter, MeterList
 from app.parsers import parse_hierarchy, parse_meters
 
 settings = get_settings()
 client = UrjaPortalClient(settings)
-registered_demo_users: set[str] = set()
 
 
 @asynccontextmanager
@@ -52,36 +51,6 @@ async def health() -> HealthResponse:
     if settings.demo_mode:
         return HealthResponse(status="ok", upstream="demo")
     return HealthResponse(status="ok", upstream="reachable" if await client.request_health() else "unavailable")
-
-
-@app.get("/api/v1/session", response_model=SessionResponse, tags=["session"])
-async def session_status() -> SessionResponse:
-    return SessionResponse(authenticated=client.authenticated, message="Portal session is active." if client.authenticated else "Portal session is not active.")
-
-
-@app.post("/api/v1/session/login", response_model=SessionResponse, responses={401: {"model": ErrorResponse}}, tags=["session"])
-async def session_login(credentials: LoginRequest) -> SessionResponse:
-    try:
-        await client.login(credentials.username, credentials.password)
-    except PortalError as error:
-        raise upstream_error(error) from error
-    return SessionResponse(authenticated=True, message="Portal session established.")
-
-
-@app.post("/api/v1/session/logout", response_model=SessionResponse, tags=["session"])
-async def session_logout() -> SessionResponse:
-    await client.logout()
-    return SessionResponse(authenticated=False, message="Portal session cleared.")
-
-
-@app.post("/api/v1/session/register", response_model=SessionResponse, tags=["session"])
-async def session_register(credentials: RegisterRequest) -> SessionResponse:
-    if not settings.demo_mode:
-        raise HTTPException(status_code=501, detail={"code": "REGISTRATION_NOT_SUPPORTED", "message": "User registration is not available through the read-only Urja adapter."})
-    if not credentials.username.strip() or not credentials.password:
-        raise HTTPException(status_code=400, detail={"code": "INVALID_REGISTRATION", "message": "Username and password are required."})
-    registered_demo_users.add(credentials.username.strip().lower())
-    return SessionResponse(authenticated=False, message="Demo account created. Sign in to continue.")
 
 
 @app.get("/api/v1/meters", response_model=MeterList, responses={502: {"model": ErrorResponse}}, tags=["meters"])
