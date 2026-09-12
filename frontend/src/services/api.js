@@ -10,8 +10,4 @@ export const api = {
   consumption: (id) => request(`/meters/${encodeURIComponent(id)}/consumption`),
   hierarchy: () => request("/hierarchy"),
   health: () => request("/health"),
-  session: () => request("/session"),
-  login: (credentials) => request("/session/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(credentials) }),
-  logout: () => request("/session/logout", { method: "POST" }),
-  register: (credentials) => request("/session/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(credentials) }),
 };

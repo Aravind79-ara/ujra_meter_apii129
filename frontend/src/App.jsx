@@ -4,7 +4,6 @@ import {
   NavLink,
   Route,
   Routes,
-  useNavigate,
   useParams,
 } from "react-router-dom";
 import {
@@ -14,19 +13,13 @@ import {
   CircleAlert,
   Gauge,
   LayoutDashboard,
-  LogIn,
-  LogOut,
   Menu,
   Network,
   RefreshCw,
   Search,
   X,
 } from "lucide-react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "./services/api";
 
 function Shell({ children }) {
@@ -37,7 +30,6 @@ function Shell({ children }) {
     ["/meters", "Meters", Gauge],
     ["/meters/MTR-101/consumption", "Consumption", Activity],
     ["/hierarchy", "Hierarchy", Network],
-    ["/login", "Sign in", LogIn],
   ];
 
   return (
@@ -79,7 +71,6 @@ function Shell({ children }) {
           ))}
         </nav>
 
-        <SessionToggle />
       </aside>
 
       <main className="main">
@@ -134,56 +125,6 @@ function Loading() {
       <div className="skeleton" />
       <div className="skeleton" />
       <div className="skeleton large" />
-    </div>
-  );
-}
-
-function SessionToggle() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.session,
-  });
-
-  const mutation = useMutation({
-    mutationFn: api.logout,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["session"],
-      });
-
-      navigate("/login");
-    },
-  });
-
-  const authenticated = session.data?.authenticated ?? false;
-
-  return (
-    <div className="session-control">
-      <div className="pulse">
-        <i className={authenticated ? "" : "offline"} />
-        {authenticated ? "Portal session active" : "Sign in to portal"}
-      </div>
-
-      {authenticated ? (
-        <button
-          className="session-button"
-          onClick={() => mutation.mutate()}
-          disabled={mutation.isPending}
-        >
-          <LogOut size={14} />
-          {mutation.isPending ? "Signing out..." : "Sign out"}
-        </button>
-      ) : (
-        <Link className="session-button" to="/login">
-          <LogIn size={14} />
-          Sign in
-        </Link>
-      )}
-
-      {mutation.isError && <small>{mutation.error.message}</small>}
     </div>
   );
 }
@@ -738,147 +679,11 @@ function Consumption() {
   );
 }
 
-function LoginPage() {
-  const navigate = useNavigate();
-
-  const [mode, setMode] = useState("signin");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      mode === "signin"
-        ? api.login({
-            username,
-            password,
-          })
-        : api.register({
-            username,
-            password,
-            display_name: displayName || "Operations user",
-          }),
-
-    onSuccess: () => {
-      if (mode === "signin") {
-        navigate("/");
-      } else {
-        setMode("signin");
-        setPassword("");
-      }
-    },
-  });
-
-  return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <p className="eyebrow">FLOCK ENERGY</p>
-
-        <h1>Urja Meter Ops</h1>
-
-        <p className="lede">
-          {mode === "signin"
-            ? "Sign in to the operations workspace."
-            : "Create a local demo workspace account."}
-        </p>
-
-        <div className="auth-tabs">
-          <button
-            className={mode === "signin" ? "auth-tab active" : "auth-tab"}
-            onClick={() => setMode("signin")}
-            type="button"
-          >
-            Sign in
-          </button>
-
-          <button
-            className={mode === "register" ? "auth-tab active" : "auth-tab"}
-            onClick={() => setMode("register")}
-            type="button"
-          >
-            Register
-          </button>
-        </div>
-
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            mutation.mutate();
-          }}
-        >
-          {mode === "register" && (
-            <label>
-              Display name
-
-              <input
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Operations user"
-              />
-            </label>
-          )}
-
-          <label>
-            Username
-
-            <input
-              type="email"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="operator@example.com"
-              autoComplete="username"
-              required
-            />
-          </label>
-
-          <label>
-            Password
-
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Enter password"
-              autoComplete={
-                mode === "signin" ? "current-password" : "new-password"
-              }
-              required
-            />
-          </label>
-
-          <button
-            className="button primary auth-submit"
-            type="submit"
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending
-              ? "Please wait..."
-              : mode === "signin"
-                ? "Sign in"
-                : "Create account"}
-          </button>
-
-          {mutation.isError && (
-            <p className="auth-error">{mutation.error.message}</p>
-          )}
-
-          {mode === "register" && (
-            <p className="auth-note">
-              Demo registration does not modify the read-only Urja portal.
-            </p>
-          )}
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function App() {
   return (
     <Shell>
       <Routes>
         <Route path="/" element={<Overview />} />
-        <Route path="/login" element={<LoginPage />} />
         <Route path="/meters" element={<Meters />} />
         <Route path="/meters/:meterId" element={<MeterDetail />} />
         <Route
