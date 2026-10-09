@@ -4,7 +4,7 @@
 
 The portal is a SvelteKit application titled **Urja Meter Ops**. A GET to the base URL redirects to `/login`. The login page renders a plain HTML form with `method="POST"`, fields named `email` and `password`, and no rendered CSRF field.
 
-The supplied credentials were used only during local reconnaissance. The successful login response was JSON and set an HttpOnly, Secure, SameSite=Lax cookie named `__Secure-better-auth.session_token` with a one-hour lifetime. The base route redirects an authenticated session to `/meters`.
+The supplied credentials were used only during local reconnaissance. The successful login response was JSON and set an HttpOnly, Secure, SameSite=Lax cookie named `__Secure-better-auth.session_token` with a one-hour lifetime. The exact JSON fields were not recorded; the adapter therefore verifies an HTTP 200 JSON object and the observed session cookie without inventing a response field. The base route redirects an authenticated session to `/meters`.
 
 ## Discovered endpoints
 
@@ -39,7 +39,7 @@ Whitespace is collapsed and empty values become `null`. Unknown fields are not f
 
 `UrjaPortalClient` uses one long-lived `httpx.AsyncClient`, which preserves cookies in memory. Authentication is guarded by an asyncio lock. A redirect to `/login`, 401, or 403 invalidates the session and triggers one reauthentication attempt. Credentials, cookies, authorization headers, and upstream HTML are not logged.
 
-The API exposes `GET /api/v1/session`, `POST /api/v1/session/login`, and `POST /api/v1/session/logout` for the UI's session toggle. Logout clears the adapter's in-memory cookie; the next data request can authenticate again because the adapter owns the portal session.
+The API exposes `GET /api/v1/session`, bodyless `POST /api/v1/session/login`, and `POST /api/v1/session/logout` for session control. Live login uses only backend-configured credentials; request-supplied credentials are not accepted. Logout clears the adapter's in-memory cookie; the next data request can authenticate again because the adapter owns the portal session. In demo mode, the session state is a local simulation and does not represent authentication with the Urja portal.
 
 ## Known limitations
 

@@ -13,7 +13,7 @@ Portal reconnaissance verified `/login`, `/`, `/meters`, and `/transformers`, in
 Browser -> React UI -> FastAPI -> UrjaPortalClient -> Legacy Urja Portal
 ```
 
-The client owns authentication and cookies. Parsers own HTML normalization. API routes own pagination, errors, and the browser contract. The browser never receives portal credentials.
+The client owns authentication and cookies. Parsers own HTML normalization. API routes own pagination, errors, and the browser contract. The browser never receives portal credentials. Live login uses only the backend-configured `URJA_USERNAME` and `URJA_PASSWORD`; the login endpoint does not accept caller-supplied credentials.
 
 ## Features
 
@@ -68,7 +68,7 @@ GET /api/v1/meters/{meter_id}/consumption
 GET /api/v1/hierarchy
 ```
 
-The consumption route exists as an explicit contract boundary: live mode returns `501` until a real portal endpoint is verified, while demo mode returns synthetic sample readings clearly labeled as demo data. The sample readings are not real utility measurements and are only included for local UI validation. The session routes control the server-side adapter state and keep portal credentials off the browser.
+The consumption route exists as an explicit contract boundary: live mode returns `501` until a real portal endpoint is verified, while demo mode returns synthetic sample readings clearly labeled as demo data. The sample readings are not real utility measurements and are only included for local UI validation. The session routes control server-side adapter state and keep portal credentials off the browser. In demo mode, `authenticated` reflects the local simulation state only; it does not indicate an authenticated session with Urja.
 
 The portal currently reports zero meters. This service is intentionally read-only and does not provide meter registration. A meter must be registered by an authorized operator in Urja or its upstream utility system, after which refreshing the register will discover it.
 

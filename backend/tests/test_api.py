@@ -39,6 +39,7 @@ def test_demo_unknown_meter_returns_404():
 
 def test_session_status_and_login_logout_endpoints():
     original = app_main.settings.demo_mode
+    original_auth = app_main.client._authenticated
     try:
         app_main.settings.demo_mode = True
         app_main.client._authenticated = False
@@ -62,6 +63,7 @@ def test_session_status_and_login_logout_endpoints():
             assert test_client.get("/api/v1/session").json()["authenticated"] is False
     finally:
         app_main.settings.demo_mode = original
+        app_main.client._authenticated = original_auth
 
 
 def test_login_uses_configured_credentials_not_request_body(monkeypatch):
@@ -84,7 +86,6 @@ def test_login_uses_configured_credentials_not_request_body(monkeypatch):
 def test_openapi_validation_errors_use_custom_error_response():
     schema = app.openapi()
     for path in (
-        "/api/v1/session/login",
         "/api/v1/meters",
         "/api/v1/meters/{meter_id}",
         "/api/v1/meters/{meter_id}/consumption",
@@ -92,4 +93,8 @@ def test_openapi_validation_errors_use_custom_error_response():
         method = "post" if path.endswith("login") else "get"
         operation = schema["paths"][path][method]
         assert operation["responses"]["422"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/ErrorResponse"
+
+    login_operation = schema["paths"]["/api/v1/session/login"]["post"]
+    assert "requestBody" not in login_operation
+    assert "422" not in login_operation["responses"]
 

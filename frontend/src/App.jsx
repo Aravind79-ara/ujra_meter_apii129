@@ -166,8 +166,7 @@ function Overview() {
           <p className="eyebrow">OPERATIONS / OVERVIEW</p>
           <h1>Meter command center</h1>
           <p className="lede">
-            A clear view of the connected Urja estate and its current portal
-            state.
+            Meter register status from the configured portal or local demo data.
           </p>
         </div>
 
@@ -206,11 +205,11 @@ function Overview() {
             />
 
             <Kpi
-              label="Portal session"
-              value={upstreamOnline ? "Online" : "Unknown"}
+              label="Upstream status"
+              value={health.data?.upstream === "demo" ? "Demo" : upstreamOnline ? "Online" : "Unknown"}
               detail={
                 health.data?.upstream === "demo"
-                  ? "Demo mode"
+                  ? "Local simulation; not logged in to Urja"
                   : "Upstream probe"
               }
               accent="amber"
@@ -229,8 +228,7 @@ function Overview() {
               </div>
 
               <p>
-                Search and inspect the normalized records returned from the
-                authenticated portal adapter.
+                Search and inspect normalized records from the meter adapter.
               </p>
 
               <Link className="text-link" to="/meters">
@@ -459,7 +457,7 @@ function MeterDetail() {
                 <p className="eyebrow">METER RECORD</p>
                 <h1>{query.data.id}</h1>
                 <p className="lede">
-                  Normalized meter record retrieved from the authenticated meter register.
+                  Normalized meter record from the meter register.
                 </p>
               </div>
 

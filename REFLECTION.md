@@ -16,6 +16,8 @@ I would capture the authenticated browser network log, identify the exact data l
 
 I initially treated the first PowerShell failure as a portal problem instead of a request-tool behavior. The lower-level probe made the distinction clear. During implementation I also briefly used Python 3.10 annotation syntax without accounting for the available Python 3.8 validation interpreter; the annotations were adjusted without changing the target design.
 
+The session review reproduced the demo bug by checking `GET /session` before login and after `POST /session/logout`; both should report the in-memory state. HTTPX response tests exposed permissive login acceptance and the unhandled redirect after a retry. The fixes make demo authentication local state, require the observed HTTP 200 JSON object and secure session cookie, reject all redirects after the retry, and source live credentials only from backend configuration. TestClient and mocked-response regressions cover these cases; the full backend suite passes.
+
 ## What would you criticise in a review?
 
 The current adapter is intentionally conservative but incomplete: it scrapes only verified page paths, does not yet use a discovered detail endpoint, and cannot provide consumption readings. Production deployment would also need structured request logging, rate limiting, a secret manager, and a browser-backed protocol capture before claiming full feature parity.

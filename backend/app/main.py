@@ -74,16 +74,33 @@ async def session_status() -> SessionResponse:
     return SessionResponse(authenticated=authenticated, demo_mode=False, upstream=upstream)
 
 
-@app.post("/api/v1/session/login", response_model=SessionResponse, responses={422: {"model": ErrorResponse}}, tags=["session"])
+@app.post(
+    "/api/v1/session/login",
+    response_model=SessionResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        502: {"model": ErrorResponse},
+        503: {"model": ErrorResponse},
+        504: {"model": ErrorResponse},
+    },
+    tags=["session"],
+)
 async def login_session() -> SessionResponse:
     if settings.demo_mode:
-        await client.login()
+        try:
+            await client.login()
+        except PortalError as error:
+            raise upstream_error(error) from error
         return SessionResponse(authenticated=True, demo_mode=True, upstream="demo")
 
     if not settings.urja_username or not settings.urja_password:
         raise HTTPException(status_code=400, detail={"code": "AUTH_REQUIRED", "message": "Username and password are required."})
 
-    await client.login()
+    try:
+        await client.login()
+    except PortalError as error:
+        raise upstream_error(error) from error
     return SessionResponse(authenticated=True, demo_mode=False, upstream="reachable")
 
 
