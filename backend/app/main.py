@@ -129,9 +129,11 @@ async def get_meter(meter_id: str) -> Meter:
     raise HTTPException(status_code=404, detail={"code": "METER_NOT_FOUND", "message": "Meter was not found in the portal."})
 
 
-@app.get("/api/v1/meters/{meter_id}/consumption", responses={501: {"model": ErrorResponse}}, tags=["consumption"])
+@app.get("/api/v1/meters/{meter_id}/consumption", responses={501: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}, tags=["consumption"])
 async def get_consumption(meter_id: str) -> Consumption:
     if settings.demo_mode:
+        if meter_id not in {meter.id for meter in DEMO_METERS}:
+            raise HTTPException(status_code=404, detail={"code": "METER_NOT_FOUND", "message": "The requested demo meter does not exist."})
         return demo_consumption(meter_id)
     raise HTTPException(status_code=501, detail={"code": "UPSTREAM_ENDPOINT_UNKNOWN", "message": "A consumption endpoint was not verified during portal reconnaissance."})
 

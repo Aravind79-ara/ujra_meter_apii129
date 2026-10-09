@@ -28,12 +28,36 @@ class UrjaPortalClient:
     async def logout(self) -> None:
         self._client.cookies.clear()
         self._authenticated = False
-        self._username = ""
-        self._password = ""
 
     @property
     def authenticated(self) -> bool:
         return self._authenticated
+
+    @staticmethod
+    def _login_response_is_valid(response: httpx.Response) -> bool:
+        if response.status_code >= 400:
+            return False
+
+        location = response.headers.get("location", "")
+        if location.endswith("/login"):
+            return False
+
+        if response.url and response.url.path.endswith("/login"):
+            return False
+
+        session_cookie_names = (
+            "__Secure-better-auth.session_token",
+            "better-auth.session_token",
+            "session_token",
+        )
+        if any(name in response.cookies for name in session_cookie_names):
+            return True
+
+        html = response.text.lower()
+        if "login" in html and "password" in html and "method=\"post\"" in html:
+            return False
+
+        return True
 
     async def login(self, username: str | None = None, password: str | None = None) -> None:
         username = username or self._username
@@ -70,8 +94,10 @@ class UrjaPortalClient:
                 raise PortalError("The Urja portal timed out during login.", 504) from exc
             except httpx.HTTPError as exc:
                 raise PortalError("The Urja portal could not be reached.", 502) from exc
-            if response.status_code >= 400:
-                raise PortalError("The Urja portal rejected the configured credentials.", 401 if response.status_code in (401, 403) else 502)
+
+            if not UrjaPortalClient._login_response_is_valid(response):
+                raise PortalError("The Urja portal rejected the configured credentials.", 401)
+
             self._authenticated = True
 
     async def get_html(self, path: str) -> str:
