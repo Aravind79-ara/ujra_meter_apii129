@@ -19,6 +19,8 @@ No consumption endpoint was verified. The adapter therefore does not invent one 
 
 The authenticated `/meters` page currently renders `0 total` and `No meters found.` There is no registration form or verified write endpoint. Meter registration is outside this read-only adapter and must be performed by an authorized operator in the portal or upstream system.
 
+The API does not currently have a separately verified meter-detail HTML page. `GET /api/v1/meters/{meter_id}` resolves by reading the normalized meter list and matching the requested identifier; this is a read through the discovered register, not a claim that a dedicated upstream detail endpoint exists.
+
 ## Data mapping
 
 The parser maps table headers semantically when they are exposed by the HTML:
@@ -42,5 +44,7 @@ The API exposes `GET /api/v1/session`, `POST /api/v1/session/login`, and `POST /
 ## Known limitations
 
 - The rendered `/meters` and `/transformers` documents were identified, but the final table/detail payloads and any internal fetch calls need a browser network trace for complete field coverage.
+- No separate meter-detail page or live consumption endpoint has been verified; both remain best-effort adapters over the list view and demo fixtures.
 - Consumption, date filters, timestamp granularity, and hierarchy nesting remain `UNKNOWN — REQUIRES INVESTIGATION`.
 - The application is read-only and never submits portal mutation requests.
+- Demo consumption data is synthetic and must be labeled as such; it is not presented as real utility telemetry.

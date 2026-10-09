@@ -39,8 +39,12 @@ class UrjaPortalClient:
         username = username or self._username
         password = password or self._password
         if self.settings.demo_mode:
-            if not username or not password:
-                raise PortalError("Username and password are required.", 400)
+            if not username:
+                username = "demo-user"
+            if not password:
+                password = "demo-pass"
+            self._username = username
+            self._password = password
             self._authenticated = True
             return
         if not username or not password:

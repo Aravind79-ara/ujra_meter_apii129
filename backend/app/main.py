@@ -11,7 +11,16 @@ from fastapi.responses import JSONResponse
 from app.client import PortalError, UrjaPortalClient
 from app.core.config import get_settings
 from app.demo_data import DEMO_HIERARCHY, DEMO_METERS, demo_consumption
-from app.models import Consumption, ErrorResponse, HealthResponse, HierarchyResponse, Meter, MeterList
+from app.models import (
+    Consumption,
+    ErrorResponse,
+    HealthResponse,
+    HierarchyResponse,
+    LoginRequest,
+    Meter,
+    MeterList,
+    SessionResponse,
+)
 from app.parsers import parse_hierarchy, parse_meters
 
 settings = get_settings()
@@ -51,6 +60,42 @@ async def health() -> HealthResponse:
     if settings.demo_mode:
         return HealthResponse(status="ok", upstream="demo")
     return HealthResponse(status="ok", upstream="reachable" if await client.request_health() else "unavailable")
+
+
+@app.get("/api/v1/session", response_model=SessionResponse, tags=["session"])
+async def session_status() -> SessionResponse:
+    if settings.demo_mode:
+        # Demo mode keeps the adapter authenticated locally so sample data flows without a live portal session.
+        return SessionResponse(authenticated=True, demo_mode=True, upstream="demo")
+
+    authenticated = client.authenticated
+    if not authenticated:
+        upstream = "unavailable"
+    else:
+        upstream = "reachable"
+    return SessionResponse(authenticated=authenticated, demo_mode=False, upstream=upstream)
+
+
+@app.post("/api/v1/session/login", response_model=SessionResponse, tags=["session"])
+async def login_session(payload: Optional[LoginRequest] = None) -> SessionResponse:
+    username = payload.username if payload and payload.username else settings.urja_username
+    password = payload.password if payload and payload.password else settings.urja_password
+
+    if settings.demo_mode:
+        await client.login(username=username, password=password)
+        return SessionResponse(authenticated=True, demo_mode=True, upstream="demo")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail={"code": "AUTH_REQUIRED", "message": "Username and password are required."})
+
+    await client.login(username=username, password=password)
+    return SessionResponse(authenticated=True, demo_mode=False, upstream="reachable")
+
+
+@app.post("/api/v1/session/logout", response_model=SessionResponse, tags=["session"])
+async def logout_session() -> SessionResponse:
+    await client.logout()
+    return SessionResponse(authenticated=False, demo_mode=settings.demo_mode, upstream="demo" if settings.demo_mode else "unavailable")
 
 
 @app.get("/api/v1/meters", response_model=MeterList, responses={502: {"model": ErrorResponse}}, tags=["meters"])

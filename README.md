@@ -5,7 +5,7 @@ This repository provides a small read-only FastAPI adapter and React operations 
 
 ## Current status
 
-Portal reconnaissance verified `/login`, `/`, `/meters`, and `/transformers`, including the form fields and session cookie behavior. Consumption is deliberately marked as not discovered until its real upstream endpoint and timestamp contract can be captured. See [PROTOCOL.md](PROTOCOL.md).
+Portal reconnaissance verified `/login`, `/`, `/meters`, and `/transformers`, including the form fields and session cookie behavior. No dedicated meter-detail endpoint or live consumption endpoint has been verified, so detail lookups remain list-based and the consumption contract remains intentionally limited. See [PROTOCOL.md](PROTOCOL.md).
 
 ## Architecture
 
@@ -68,7 +68,7 @@ GET /api/v1/meters/{meter_id}/consumption
 GET /api/v1/hierarchy
 ```
 
-The consumption route exists as an explicit contract boundary and returns `501` until a real portal endpoint is verified. No sample readings are fabricated. The session controls only the server-side adapter cookie; portal credentials never reach the browser.
+The consumption route exists as an explicit contract boundary: live mode returns `501` until a real portal endpoint is verified, while demo mode returns synthetic sample readings clearly labeled as demo data. The sample readings are not real utility measurements and are only included for local UI validation. The session routes control the server-side adapter state and keep portal credentials off the browser.
 
 The portal currently reports zero meters. This service is intentionally read-only and does not provide meter registration. A meter must be registered by an authorized operator in Urja or its upstream utility system, after which refreshing the register will discover it.
 

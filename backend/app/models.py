@@ -60,3 +60,14 @@ class HealthResponse(BaseModel):
     upstream: str
 
 
+class SessionResponse(BaseModel):
+    authenticated: bool
+    demo_mode: bool
+    upstream: str
+
+
+class LoginRequest(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
