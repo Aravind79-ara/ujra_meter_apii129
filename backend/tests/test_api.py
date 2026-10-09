@@ -46,7 +46,7 @@ def test_session_status_and_login_logout_endpoints():
         with TestClient(app) as test_client:
             status = test_client.get("/api/v1/session")
             assert status.status_code == 200
-            assert status.json()["authenticated"] is True
+            assert status.json()["authenticated"] is False
             assert status.json()["demo_mode"] is True
 
             login = test_client.post(
@@ -55,10 +55,12 @@ def test_session_status_and_login_logout_endpoints():
             )
             assert login.status_code == 200
             assert login.json()["authenticated"] is True
+            assert test_client.get("/api/v1/session").json()["authenticated"] is True
 
             logout = test_client.post("/api/v1/session/logout")
             assert logout.status_code == 200
             assert logout.json()["authenticated"] is False
+            assert test_client.get("/api/v1/session").json()["authenticated"] is False
     finally:
         app_main.settings.demo_mode = original
 
@@ -84,4 +86,17 @@ def test_logout_keeps_configured_credentials_for_reauth():
         app_main.settings.demo_mode = original_demo
         app_main.settings.urja_username = original_user
         app_main.settings.urja_password = original_password
+
+
+def test_openapi_validation_errors_use_custom_error_response():
+    schema = app.openapi()
+    for path in (
+        "/api/v1/session/login",
+        "/api/v1/meters",
+        "/api/v1/meters/{meter_id}",
+        "/api/v1/meters/{meter_id}/consumption",
+    ):
+        method = "post" if path.endswith("login") else "get"
+        operation = schema["paths"][path][method]
+        assert operation["responses"]["422"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/ErrorResponse"
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import httpx
 
@@ -38,11 +39,7 @@ class UrjaPortalClient:
         if response.status_code >= 400:
             return False
 
-        location = response.headers.get("location", "")
-        if location.endswith("/login"):
-            return False
-
-        if response.url and response.url.path.endswith("/login"):
+        if UrjaPortalClient._is_login_redirect(response):
             return False
 
         session_cookie_names = (
@@ -50,14 +47,19 @@ class UrjaPortalClient:
             "better-auth.session_token",
             "session_token",
         )
-        if any(name in response.cookies for name in session_cookie_names):
-            return True
-
-        html = response.text.lower()
-        if "login" in html and "password" in html and "method=\"post\"" in html:
+        if not any(response.cookies.get(name) for name in session_cookie_names):
             return False
 
-        return True
+        try:
+            body = response.json()
+        except (json.JSONDecodeError, ValueError):
+            return False
+        return isinstance(body, dict)
+
+    @staticmethod
+    def _is_login_redirect(response: httpx.Response) -> bool:
+        location = response.headers.get("location", "")
+        return bool(location) and httpx.URL(location).path.rstrip("/").endswith("/login")
 
     async def login(self, username: str | None = None, password: str | None = None) -> None:
         username = username or self._username
@@ -112,10 +114,13 @@ class UrjaPortalClient:
             raise PortalError("The Urja portal timed out.", 504) from exc
         except httpx.HTTPError as exc:
             raise PortalError("The Urja portal could not be reached.", 502) from exc
-        if response.status_code in (401, 403) or response.headers.get("location", "").endswith("/login"):
+        if response.status_code in (401, 403) or UrjaPortalClient._is_login_redirect(response):
             self._authenticated = False
             await self.login()
             response = await self._client.get(path)
+            if response.status_code in (401, 403) or UrjaPortalClient._is_login_redirect(response):
+                self._authenticated = False
+                raise PortalError("The Urja portal session could not be renewed.", 401)
         if response.status_code >= 400:
             raise PortalError("The Urja portal returned an upstream error.", 502)
         return response

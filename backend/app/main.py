@@ -65,8 +65,7 @@ async def health() -> HealthResponse:
 @app.get("/api/v1/session", response_model=SessionResponse, tags=["session"])
 async def session_status() -> SessionResponse:
     if settings.demo_mode:
-        # Demo mode keeps the adapter authenticated locally so sample data flows without a live portal session.
-        return SessionResponse(authenticated=True, demo_mode=True, upstream="demo")
+        return SessionResponse(authenticated=client.authenticated, demo_mode=True, upstream="demo")
 
     authenticated = client.authenticated
     if not authenticated:
@@ -76,7 +75,7 @@ async def session_status() -> SessionResponse:
     return SessionResponse(authenticated=authenticated, demo_mode=False, upstream=upstream)
 
 
-@app.post("/api/v1/session/login", response_model=SessionResponse, tags=["session"])
+@app.post("/api/v1/session/login", response_model=SessionResponse, responses={422: {"model": ErrorResponse}}, tags=["session"])
 async def login_session(payload: Optional[LoginRequest] = None) -> SessionResponse:
     username = payload.username if payload and payload.username else settings.urja_username
     password = payload.password if payload and payload.password else settings.urja_password
@@ -98,7 +97,7 @@ async def logout_session() -> SessionResponse:
     return SessionResponse(authenticated=False, demo_mode=settings.demo_mode, upstream="demo" if settings.demo_mode else "unavailable")
 
 
-@app.get("/api/v1/meters", response_model=MeterList, responses={502: {"model": ErrorResponse}}, tags=["meters"])
+@app.get("/api/v1/meters", response_model=MeterList, responses={422: {"model": ErrorResponse}, 502: {"model": ErrorResponse}}, tags=["meters"])
 async def list_meters(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), search: Optional[str] = None) -> MeterList:
     if settings.demo_mode:
         meters = DEMO_METERS
@@ -114,7 +113,7 @@ async def list_meters(page: int = Query(1, ge=1), page_size: int = Query(20, ge=
     return MeterList(items=meters[start:start + page_size], page=page, page_size=page_size, total=len(meters))
 
 
-@app.get("/api/v1/meters/{meter_id}", response_model=Meter, responses={404: {"model": ErrorResponse}}, tags=["meters"])
+@app.get("/api/v1/meters/{meter_id}", response_model=Meter, responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}}, tags=["meters"])
 async def get_meter(meter_id: str) -> Meter:
     if settings.demo_mode:
         meters = DEMO_METERS
@@ -129,7 +128,7 @@ async def get_meter(meter_id: str) -> Meter:
     raise HTTPException(status_code=404, detail={"code": "METER_NOT_FOUND", "message": "Meter was not found in the portal."})
 
 
-@app.get("/api/v1/meters/{meter_id}/consumption", responses={501: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}, tags=["consumption"])
+@app.get("/api/v1/meters/{meter_id}/consumption", responses={501: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}}, tags=["consumption"])
 async def get_consumption(meter_id: str) -> Consumption:
     if settings.demo_mode:
         if meter_id not in {meter.id for meter in DEMO_METERS}:

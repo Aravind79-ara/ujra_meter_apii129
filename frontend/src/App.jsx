@@ -459,7 +459,7 @@ function MeterDetail() {
                 <p className="eyebrow">METER RECORD</p>
                 <h1>{query.data.id}</h1>
                 <p className="lede">
-                  Normalized detail from the authenticated Urja page.
+                  Normalized record from the meter register.
                 </p>
               </div>
 
