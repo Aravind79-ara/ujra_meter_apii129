@@ -459,7 +459,7 @@ function MeterDetail() {
                 <p className="eyebrow">METER RECORD</p>
                 <h1>{query.data.id}</h1>
                 <p className="lede">
-                  Normalized record from the meter register.
+                  Normalized meter record retrieved from the authenticated meter register.
                 </p>
               </div>
 

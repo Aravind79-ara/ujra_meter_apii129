@@ -20,8 +20,6 @@ class UrjaPortalClient:
         self._client = httpx.AsyncClient(base_url=settings.urja_base_url.rstrip("/"), timeout=settings.request_timeout, follow_redirects=False)
         self._auth_lock = asyncio.Lock()
         self._authenticated = False
-        self._username = settings.urja_username
-        self._password = settings.urja_password
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -36,10 +34,14 @@ class UrjaPortalClient:
 
     @staticmethod
     def _login_response_is_valid(response: httpx.Response) -> bool:
-        if response.status_code >= 400:
+        if not 200 <= response.status_code < 300:
             return False
 
         if UrjaPortalClient._is_login_redirect(response):
+            return False
+
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json" and not content_type.endswith("+json"):
             return False
 
         session_cookie_names = (
@@ -61,22 +63,14 @@ class UrjaPortalClient:
         location = response.headers.get("location", "")
         return bool(location) and httpx.URL(location).path.rstrip("/").endswith("/login")
 
-    async def login(self, username: str | None = None, password: str | None = None) -> None:
-        username = username or self._username
-        password = password or self._password
+    async def login(self) -> None:
+        username = self.settings.urja_username
+        password = self.settings.urja_password
         if self.settings.demo_mode:
-            if not username:
-                username = "demo-user"
-            if not password:
-                password = "demo-pass"
-            self._username = username
-            self._password = password
             self._authenticated = True
             return
         if not username or not password:
             raise PortalError("Portal credentials are not configured.", 503)
-        self._username = username
-        self._password = password
         async with self._auth_lock:
             if self._authenticated:
                 return

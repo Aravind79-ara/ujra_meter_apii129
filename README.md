@@ -84,7 +84,7 @@ The automated tests do not depend on the live portal. Live reconnaissance is doc
 
 ## Docker
 
-`docker-compose.yml` provides a simple backend service and a static frontend service. Supply a local `.env` at runtime; credentials are never placed in the image.
+`docker-compose.yml` provides the backend and a Vite development server for the frontend; it does not serve a production static build. Supply a local `.env` at runtime; portal credentials are read from the backend environment and are never placed in the image.
 
 ## Design decisions and omissions
 

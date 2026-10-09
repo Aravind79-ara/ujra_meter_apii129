@@ -16,7 +16,6 @@ from app.models import (
     ErrorResponse,
     HealthResponse,
     HierarchyResponse,
-    LoginRequest,
     Meter,
     MeterList,
     SessionResponse,
@@ -76,18 +75,15 @@ async def session_status() -> SessionResponse:
 
 
 @app.post("/api/v1/session/login", response_model=SessionResponse, responses={422: {"model": ErrorResponse}}, tags=["session"])
-async def login_session(payload: Optional[LoginRequest] = None) -> SessionResponse:
-    username = payload.username if payload and payload.username else settings.urja_username
-    password = payload.password if payload and payload.password else settings.urja_password
-
+async def login_session() -> SessionResponse:
     if settings.demo_mode:
-        await client.login(username=username, password=password)
+        await client.login()
         return SessionResponse(authenticated=True, demo_mode=True, upstream="demo")
 
-    if not username or not password:
+    if not settings.urja_username or not settings.urja_password:
         raise HTTPException(status_code=400, detail={"code": "AUTH_REQUIRED", "message": "Username and password are required."})
 
-    await client.login(username=username, password=password)
+    await client.login()
     return SessionResponse(authenticated=True, demo_mode=False, upstream="reachable")
 
 

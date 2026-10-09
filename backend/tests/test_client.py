@@ -23,10 +23,17 @@ def test_login_response_requires_json_and_session_cookie():
         request=request,
     )
     json_only_response = httpx.Response(200, json={"token": "session-token"}, request=request)
+    redirected_response = httpx.Response(
+        302,
+        json={"token": "session-token"},
+        headers={"set-cookie": "session_token=session-token; Path=/; HttpOnly"},
+        request=request,
+    )
 
     assert UrjaPortalClient._login_response_is_valid(valid_response) is True
     assert UrjaPortalClient._login_response_is_valid(cookie_only_response) is False
     assert UrjaPortalClient._login_response_is_valid(json_only_response) is False
+    assert UrjaPortalClient._login_response_is_valid(redirected_response) is False
 
 
 def test_retry_login_redirect_is_reported_as_authentication_failure():

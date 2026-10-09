@@ -1,4 +1,4 @@
-import asyncio
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
@@ -51,7 +51,6 @@ def test_session_status_and_login_logout_endpoints():
 
             login = test_client.post(
                 "/api/v1/session/login",
-                json={"username": "demo-user", "password": "demo-pass"},
             )
             assert login.status_code == 200
             assert login.json()["authenticated"] is True
@@ -65,27 +64,21 @@ def test_session_status_and_login_logout_endpoints():
         app_main.settings.demo_mode = original
 
 
-def test_logout_keeps_configured_credentials_for_reauth():
-    original_demo = app_main.settings.demo_mode
-    original_user = app_main.settings.urja_username
-    original_password = app_main.settings.urja_password
-    try:
-        app_main.settings.demo_mode = False
-        app_main.settings.urja_username = "configured-user"
-        app_main.settings.urja_password = "configured-pass"
-        app_main.client._username = "configured-user"
-        app_main.client._password = "configured-pass"
-        app_main.client._authenticated = True
+def test_login_uses_configured_credentials_not_request_body(monkeypatch):
+    monkeypatch.setattr(app_main.settings, "demo_mode", False)
+    monkeypatch.setattr(app_main.settings, "urja_username", "configured-user")
+    monkeypatch.setattr(app_main.settings, "urja_password", "configured-pass")
+    login = AsyncMock()
+    monkeypatch.setattr(app_main.client, "login", login)
 
-        asyncio.run(app_main.client.logout())
+    with TestClient(app) as test_client:
+        response = test_client.post(
+            "/api/v1/session/login",
+            json={"username": "untrusted-user", "password": "untrusted-pass"},
+        )
 
-        assert app_main.client._authenticated is False
-        assert app_main.client._username == "configured-user"
-        assert app_main.client._password == "configured-pass"
-    finally:
-        app_main.settings.demo_mode = original_demo
-        app_main.settings.urja_username = original_user
-        app_main.settings.urja_password = original_password
+    assert response.status_code == 200
+    login.assert_awaited_once_with()
 
 
 def test_openapi_validation_errors_use_custom_error_response():

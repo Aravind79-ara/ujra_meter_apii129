@@ -66,8 +66,3 @@ class SessionResponse(BaseModel):
     upstream: str
 
 
-class LoginRequest(BaseModel):
-    username: Optional[str] = None
-    password: Optional[str] = None
-
-
