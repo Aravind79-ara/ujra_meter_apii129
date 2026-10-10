@@ -103,6 +103,19 @@ class UrjaPortalClient:
         response = await self._request(path)
         return response.text
 
+    async def get_json(self, path: str) -> dict[str, object]:
+        await self.login()
+        response = await self._request(path)
+        if "application/json" not in response.headers.get("content-type", "").lower():
+            raise PortalError("The Urja portal returned an unexpected data format.")
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise PortalError("The Urja portal returned invalid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise PortalError("The Urja portal returned an unexpected data format.")
+        return payload
+
     async def _request(self, path: str) -> httpx.Response:
         try:
             response = await self._client.get(path)

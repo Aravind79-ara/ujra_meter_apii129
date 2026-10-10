@@ -67,54 +67,54 @@
             }
           },
           "400": {
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Bad Request"
+            }
           },
           "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unauthorized"
+            }
           },
           "502": {
+            "description": "Bad Gateway",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Bad Gateway"
+            }
           },
           "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Service Unavailable"
+            }
           },
           "504": {
+            "description": "Gateway Timeout",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Gateway Timeout"
+            }
           }
         }
       }
@@ -199,6 +199,16 @@
               }
             }
           },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
           "502": {
             "content": {
               "application/json": {
@@ -208,16 +218,6 @@
               }
             },
             "description": "Bad Gateway"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       }
@@ -262,48 +262,6 @@
             "description": "Not Found"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/meters/{meter_id}/consumption": {
-      "get": {
-        "tags": [
-          "consumption"
-        ],
-        "summary": "Get Consumption",
-        "operationId": "get_consumption_api_v1_meters__meter_id__consumption_get",
-        "parameters": [
-          {
-            "name": "meter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Meter Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Consumption"
-                }
-              }
-            }
-          },
-          "501": {
             "content": {
               "application/json": {
                 "schema": {
@@ -311,17 +269,17 @@
                 }
               }
             },
-            "description": "Not Implemented"
+            "description": "Unprocessable Content"
           },
-          "422": {
-            "description": "Validation Error",
+          "502": {
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Gateway"
           }
         }
       }
@@ -343,6 +301,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -350,38 +318,6 @@
   },
   "components": {
     "schemas": {
-      "Consumption": {
-        "properties": {
-          "meter_id": {
-            "type": "string",
-            "title": "Meter Id"
-          },
-          "unit": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit"
-          },
-          "readings": {
-            "items": {
-              "$ref": "#/components/schemas/Reading"
-            },
-            "type": "array",
-            "title": "Readings"
-          }
-        },
-        "type": "object",
-        "required": [
-          "meter_id",
-          "readings"
-        ],
-        "title": "Consumption"
-      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -443,6 +379,28 @@
           "kind": {
             "type": "string",
             "title": "Kind"
+          },
+          "feeder_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feeder Code"
+          },
+          "capacity_kva": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Kva"
           },
           "children": {
             "items": {
@@ -509,6 +467,28 @@
             ],
             "title": "Serial Number"
           },
+          "make": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Make"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
           "status": {
             "anyOf": [
               {
@@ -530,6 +510,17 @@
               }
             ],
             "title": "Location"
+          },
+          "dt_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dt Code"
           },
           "network": {
             "additionalProperties": {
@@ -593,25 +584,6 @@
           "total"
         ],
         "title": "MeterList"
-      },
-      "Reading": {
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Timestamp"
-          },
-          "value": {
-            "type": "number",
-            "title": "Value"
-          }
-        },
-        "type": "object",
-        "required": [
-          "timestamp",
-          "value"
-        ],
-        "title": "Reading"
       },
       "SessionResponse": {
         "properties": {

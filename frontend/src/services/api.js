@@ -7,7 +7,6 @@ async function request(path, options = {}) {
 export const api = {
   meters: (search = "") => request(`/meters?page_size=100${search ? `&search=${encodeURIComponent(search)}` : ""}`),
   meter: (id) => request(`/meters/${encodeURIComponent(id)}`),
-  consumption: (id) => request(`/meters/${encodeURIComponent(id)}/consumption`),
   hierarchy: () => request("/hierarchy"),
   health: () => request("/health"),
 };

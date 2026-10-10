@@ -12,12 +12,12 @@ The supplied credentials were used only during local reconnaissance. The success
 | --- | --- | --- | --- | --- |
 | Login | POST | `/login` | Form fields `email`, `password` | JSON success response and session cookie |
 | Portal entry | GET | `/` | Session cookie | 302 to `/meters` after authentication |
-| Meter page | GET | `/meters` | Session cookie | HTML page |
-| Transformer page | GET | `/transformers` | Session cookie | HTML page; relationship shape still requires inspection |
+| Meter register data | GET | `/portal/meters/search` | Session cookie; `q`, `page` | JSON `{ data, total, page, pageSize }`; verified with 403 total records |
+| Transformer data | GET | `/portal/dts` | Session cookie; `page` | JSON `{ data, total, page, pageSize }`; verified with 40 total records |
+| Meter page | GET | `/meters` | Session cookie | HTML shell; rows are loaded from `/portal/meters/search` in the browser |
+| Transformer page | GET | `/transformers` | Session cookie | HTML shell; rows are loaded from `/portal/dts` in the browser |
 
-No consumption endpoint was verified. The adapter therefore does not invent one and returns `501 UPSTREAM_ENDPOINT_UNKNOWN` for the modern consumption route.
-
-The authenticated `/meters` page currently renders `0 total` and `No meters found.` There is no registration form or verified write endpoint. Meter registration is outside this read-only adapter and must be performed by an authorized operator in the portal or upstream system.
+The HTML page is not the data source: its server-rendered table is only a loading/empty placeholder. The authenticated browser fetches meter and transformer rows from the JSON endpoints above. The adapter now calls those endpoints directly and follows their 20-record pagination.
 
 The API does not currently have a separately verified meter-detail HTML page. `GET /api/v1/meters/{meter_id}` resolves by reading the normalized meter list and matching the requested identifier; this is a read through the discovered register, not a claim that a dedicated upstream detail endpoint exists.
 
@@ -33,6 +33,8 @@ The parser maps table headers semantically when they are exposed by the HTML:
 | `Location` or `Address` | `location` |
 | `Feeder`, `Transformer`, `Substation`, `Network` | `network` object |
 
+The JSON meter endpoint provides `meterId`, `serialNo`, `make`, `phaseType`, `installStatus`, and `dtCode`; these map to the API meter ID, serial number, make, phase, status, and distribution-transformer code. Transformer records provide `code`, `name`, `feederCode`, and `capacityKva`.
+
 Whitespace is collapsed and empty values become `null`. Unknown fields are not fabricated.
 
 ## Session management
@@ -43,8 +45,7 @@ The API exposes `GET /api/v1/session`, bodyless `POST /api/v1/session/login`, an
 
 ## Known limitations
 
-- The rendered `/meters` and `/transformers` documents were identified, but the final table/detail payloads and any internal fetch calls need a browser network trace for complete field coverage.
-- No separate meter-detail page or live consumption endpoint has been verified; both remain best-effort adapters over the list view and demo fixtures.
-- Consumption, date filters, timestamp granularity, and hierarchy nesting remain `UNKNOWN — REQUIRES INVESTIGATION`.
+- The meter and transformer list endpoints and their current fields are verified. The hierarchy relationships and any additional portal fields remain unverified.
+- No separate meter-detail page has been verified; meter detail lookups remain search-based.
+- Date filters and hierarchy nesting remain `UNKNOWN — REQUIRES INVESTIGATION`.
 - The application is read-only and never submits portal mutation requests.
-- Demo consumption data is synthetic and must be labeled as such; it is not presented as real utility telemetry.

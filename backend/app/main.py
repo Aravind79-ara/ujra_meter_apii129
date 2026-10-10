@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from typing import Optional
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,9 +12,8 @@ from fastapi.responses import JSONResponse
 
 from app.client import PortalError, UrjaPortalClient
 from app.core.config import get_settings
-from app.demo_data import DEMO_HIERARCHY, DEMO_METERS, demo_consumption
+from app.demo_data import DEMO_HIERARCHY, DEMO_METERS
 from app.models import (
-    Consumption,
     ErrorResponse,
     HealthResponse,
     HierarchyResponse,
@@ -21,7 +21,9 @@ from app.models import (
     MeterList,
     SessionResponse,
 )
-from app.parsers import parse_hierarchy, parse_meters
+from app.parsers import parse_portal_meters, parse_portal_transformers
+
+PORTAL_PAGE_SIZE = 20
 
 
 settings = get_settings()
@@ -118,6 +120,40 @@ def upstream_error(error: PortalError) -> HTTPException:
             "message": str(error),
         },
     )
+
+
+async def portal_meter_page(
+    search: Optional[str],
+    page: int,
+    page_size: int,
+) -> tuple[list[Meter], int]:
+    start = (page - 1) * page_size
+    first_portal_page = start // PORTAL_PAGE_SIZE + 1
+    query = urlencode({"q": search or "", "page": first_portal_page})
+
+    try:
+        meters, total, upstream_page_size = parse_portal_meters(
+            await client.get_json(f"/portal/meters/search?{query}")
+        )
+        start_page_offset = (first_portal_page - 1) * upstream_page_size
+        local_start = start - start_page_offset
+        required_count = max(0, min(page_size, total - start))
+        last_offset = local_start + required_count
+        next_page = first_portal_page + 1
+
+        while len(meters) < last_offset:
+            next_query = urlencode({"q": search or "", "page": next_page})
+            next_meters, _, next_page_size = parse_portal_meters(
+                await client.get_json(f"/portal/meters/search?{next_query}")
+            )
+            if next_page_size != upstream_page_size or not next_meters:
+                raise PortalError("The Urja portal returned inconsistent meter pages.")
+            meters.extend(next_meters)
+            next_page += 1
+    except ValueError as error:
+        raise PortalError("The Urja portal returned invalid meter data.") from error
+
+    return meters[local_start:last_offset], total
 
 
 @app.get(
@@ -244,28 +280,27 @@ async def list_meters(
 ) -> MeterList:
     if settings.demo_mode:
         meters = DEMO_METERS
+        if search:
+            term = search.casefold()
+            meters = [
+                meter
+                for meter in meters
+                if term in meter.model_dump_json().casefold()
+            ]
+        start = (page - 1) * page_size
+        total = len(meters)
+        items = meters[start : start + page_size]
     else:
         try:
-            html = await client.get_html("/meters")
-            meters = parse_meters(html, settings.urja_base_url)
+            items, total = await portal_meter_page(search, page, page_size)
         except PortalError as error:
             raise upstream_error(error) from error
 
-    if search:
-        term = search.casefold()
-        meters = [
-            meter
-            for meter in meters
-            if term in meter.model_dump_json().casefold()
-        ]
-
-    start = (page - 1) * page_size
-
     return MeterList(
-        items=meters[start : start + page_size],
+        items=items,
         page=page,
         page_size=page_size,
-        total=len(meters),
+        total=total,
     )
 
 
@@ -282,10 +317,11 @@ async def list_meters(
 async def get_meter(meter_id: str) -> Meter:
     if settings.demo_mode:
         meters = DEMO_METERS
+        if meter_id not in {meter.id for meter in meters}:
+            meters = []
     else:
         try:
-            html = await client.get_html("/meters")
-            meters = parse_meters(html, settings.urja_base_url)
+            meters, _ = await portal_meter_page(meter_id, 1, 100)
         except PortalError as error:
             raise upstream_error(error) from error
 
@@ -298,41 +334,6 @@ async def get_meter(meter_id: str) -> Meter:
         detail={
             "code": "METER_NOT_FOUND",
             "message": "Meter was not found in the portal.",
-        },
-    )
-
-
-@app.get(
-    "/api/v1/meters/{meter_id}/consumption",
-    response_model=Consumption,
-    responses={
-        404: {"model": ErrorResponse},
-        422: {"model": ErrorResponse},
-        501: {"model": ErrorResponse},
-    },
-    tags=["consumption"],
-)
-async def get_consumption(meter_id: str) -> Consumption:
-    if settings.demo_mode:
-        if meter_id not in {meter.id for meter in DEMO_METERS}:
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "code": "METER_NOT_FOUND",
-                    "message": "The requested demo meter does not exist.",
-                },
-            )
-
-        return demo_consumption(meter_id)
-
-    raise HTTPException(
-        status_code=501,
-        detail={
-            "code": "UPSTREAM_ENDPOINT_UNKNOWN",
-            "message": (
-                "A consumption endpoint was not verified "
-                "during portal reconnaissance."
-            ),
         },
     )
 
@@ -351,8 +352,21 @@ async def hierarchy() -> HierarchyResponse:
         )
 
     try:
-        html = await client.get_html("/transformers")
-        nodes = parse_hierarchy(html)
+        first_page, total, page_size = parse_portal_transformers(
+            await client.get_json("/portal/dts?page=1")
+        )
+        nodes = first_page
+        for page in range(2, (total + page_size - 1) // page_size + 1):
+            next_nodes, _, next_page_size = parse_portal_transformers(
+                await client.get_json(f"/portal/dts?page={page}")
+            )
+            if next_page_size != page_size:
+                raise PortalError("The Urja portal returned inconsistent transformer pages.")
+            nodes.extend(next_nodes)
+    except ValueError as error:
+        raise upstream_error(
+            PortalError("The Urja portal returned invalid transformer data.")
+        ) from error
     except PortalError as error:
         raise upstream_error(error) from error
 
@@ -363,8 +377,7 @@ async def hierarchy() -> HierarchyResponse:
             None
             if nodes
             else (
-                "The portal page did not expose "
-                "a reliable hierarchy structure."
+                "The portal did not return any distribution transformers."
             )
         ),
     )

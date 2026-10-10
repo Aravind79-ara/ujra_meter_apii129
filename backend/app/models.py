@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -18,8 +17,11 @@ class ErrorResponse(BaseModel):
 class Meter(BaseModel):
     id: str
     serial_number: Optional[str] = None
+    make: Optional[str] = None
+    phase: Optional[str] = None
     status: Optional[str] = None
     location: Optional[str] = None
+    dt_code: Optional[str] = None
     network: Dict[str, Optional[str]] = Field(default_factory=dict)
     source_url: Optional[str] = None
 
@@ -31,21 +33,12 @@ class MeterList(BaseModel):
     total: int
 
 
-class Reading(BaseModel):
-    timestamp: datetime
-    value: float
-
-
-class Consumption(BaseModel):
-    meter_id: str
-    unit: Optional[str] = None
-    readings: List[Reading]
-
-
 class HierarchyNode(BaseModel):
     id: str
     label: str
     kind: str
+    feeder_code: Optional[str] = None
+    capacity_kva: Optional[int] = None
     children: List["HierarchyNode"] = Field(default_factory=list)
 
 
@@ -64,5 +57,3 @@ class SessionResponse(BaseModel):
     authenticated: bool
     demo_mode: bool
     upstream: str
-
-

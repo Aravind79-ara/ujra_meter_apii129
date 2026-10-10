@@ -5,7 +5,7 @@ This repository provides a small read-only FastAPI adapter and React operations 
 
 ## Current status
 
-Portal reconnaissance verified `/login`, `/`, `/meters`, and `/transformers`, including the form fields and session cookie behavior. No dedicated meter-detail endpoint or live consumption endpoint has been verified, so detail lookups remain list-based and the consumption contract remains intentionally limited. See [PROTOCOL.md](PROTOCOL.md).
+Portal reconnaissance verified `/login` and the browser-side JSON endpoints used by the meter and transformer pages. The HTML routes render an empty shell before the browser fetches those JSON records, so the backend reads the same authenticated JSON endpoints. No dedicated meter-detail endpoint has been verified; detail lookups remain search-based. See [PROTOCOL.md](PROTOCOL.md).
 
 ## Architecture
 
@@ -17,7 +17,7 @@ The client owns authentication and cookies. Parsers own HTML normalization. API 
 
 ## Features
 
-- Meter register with search and pagination
+- Live meter register with search and pagination
 - Meter detail view
 - Verified hierarchy/transformer page adapter
 - Responsive operations dashboard
@@ -64,13 +64,12 @@ POST /api/v1/session/login
 POST /api/v1/session/logout
 GET /api/v1/meters?page=1&page_size=20&search=...
 GET /api/v1/meters/{meter_id}
-GET /api/v1/meters/{meter_id}/consumption
 GET /api/v1/hierarchy
 ```
 
-The consumption route exists as an explicit contract boundary: live mode returns `501` until a real portal endpoint is verified, while demo mode returns synthetic sample readings clearly labeled as demo data. The sample readings are not real utility measurements and are only included for local UI validation. The session routes control server-side adapter state and keep portal credentials off the browser. In demo mode, `authenticated` reflects the local simulation state only; it does not indicate an authenticated session with Urja.
+The session routes control server-side adapter state and keep portal credentials off the browser. In demo mode, `authenticated` reflects the local simulation state only; it does not indicate an authenticated session with Urja.
 
-The portal currently reports zero meters. This service is intentionally read-only and does not provide meter registration. A meter must be registered by an authorized operator in Urja or its upstream utility system, after which refreshing the register will discover it.
+The adapter reads the portal's live paginated meter and transformer records. It is intentionally read-only and does not provide meter registration.
 
 ## Tests and validation
 
@@ -88,6 +87,6 @@ The automated tests do not depend on the live portal. Live reconnaissance is doc
 
 ## Design decisions and omissions
 
-The implementation favors a small in-memory session client over Redis or a database because the assignment scope is a single read-only adapter. It does not add a local index, bulk ingestion, invented hierarchy, or speculative upstream routes. The next high-value step is authenticated browser network capture, followed by fixtures and consumption support.
+The implementation favors a small in-memory session client over Redis or a database because the assignment scope is a single read-only adapter. It does not add a local index, bulk ingestion, invented hierarchy, or speculative upstream routes.
 
 See [REFLECTION.md](REFLECTION.md) for assumptions, mistakes, and review notes.

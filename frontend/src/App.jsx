@@ -28,7 +28,6 @@ function Shell({ children }) {
   const links = [
     ["/", "Overview", LayoutDashboard],
     ["/meters", "Meters", Gauge],
-    ["/meters/MTR-101/consumption", "Consumption", Activity],
     ["/hierarchy", "Hierarchy", Network],
   ];
 
@@ -258,20 +257,7 @@ function Overview() {
 
                 <div>
                   <dt>Verified routes</dt>
-                  <dd>/login · /meters · /transformers</dd>
-                </div>
-
-                <div>
-                  <dt>Consumption</dt>
-                  <dd
-                    className={
-                      health.data?.upstream === "demo" ? "" : "muted"
-                    }
-                  >
-                    {health.data?.upstream === "demo"
-                      ? "Demo records available"
-                      : "Endpoint pending discovery"}
-                  </dd>
+                  <dd>/login · /portal/meters/search · /portal/dts</dd>
                 </div>
               </dl>
             </div>
@@ -307,7 +293,7 @@ function Meters() {
           <p className="eyebrow">REGISTRY / METERS</p>
           <h1>Meter register</h1>
           <p className="lede">
-            Search the portal’s normalized meter records.
+            Search live meter records from the authenticated Urja portal.
           </p>
         </div>
 
@@ -323,7 +309,7 @@ function Meters() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search ID, serial, status or location"
+            placeholder="Search meter number or serial"
             aria-label="Search meters"
           />
         </div>
@@ -352,10 +338,11 @@ function Meters() {
               <thead>
                 <tr>
                   <th>Meter</th>
-                  <th>Serial number</th>
+                  <th>Serial</th>
+                  <th>Make</th>
+                  <th>Phase</th>
                   <th>Status</th>
-                  <th>Location</th>
-                  <th>Network</th>
+                  <th>DT</th>
                   <th />
                 </tr>
               </thead>
@@ -379,20 +366,16 @@ function Meters() {
                       )}
                     </td>
 
+                    <td>{meter.make ?? <span className="muted">—</span>}</td>
+
+                    <td>{meter.phase ?? <span className="muted">—</span>}</td>
+
                     <td>
                       <Status value={meter.status} />
                     </td>
 
                     <td>
-                      {meter.location ?? (
-                        <span className="muted">Not exposed</span>
-                      )}
-                    </td>
-
-                    <td>
-                      {Object.values(meter.network).filter(Boolean).join(" · ") || (
-                        <span className="muted">Not exposed</span>
-                      )}
+                      {meter.dt_code ?? <span className="muted">—</span>}
                     </td>
 
                     <td>
@@ -412,12 +395,11 @@ function Meters() {
             <div className="empty">
               <Gauge size={28} />
 
-              <h3>No meters registered in Urja</h3>
+              <h3>No matching meters</h3>
 
               <p>
-                The authenticated portal currently reports zero meters. This
-                adapter is read-only, so registration must be completed by an
-                authorized operator in Urja or its upstream source.
+                No records matched this search. Try another meter number or
+                serial number.
               </p>
             </div>
           )}
@@ -470,7 +452,10 @@ function MeterDetail() {
                 rows={[
                   ["Meter ID", query.data.id],
                   ["Serial number", query.data.serial_number],
+                  ["Make", query.data.make],
+                  ["Phase", query.data.phase],
                   ["Status", query.data.status],
+                  ["Distribution transformer", query.data.dt_code],
                 ]}
               />
 
@@ -487,22 +472,6 @@ function MeterDetail() {
               />
             </div>
 
-            <div className="panel unavailable">
-              <div className="unavailable-icon">
-                <Activity size={20} />
-              </div>
-
-              <div>
-                <p className="eyebrow">CONSUMPTION</p>
-                <h2>Readings are not yet connected</h2>
-
-                <p>
-                  The portal reconnaissance verified the meter register, but
-                  did not verify a consumption endpoint or timestamp contract.
-                  No readings are fabricated here.
-                </p>
-              </div>
-            </div>
           </>
         )
       )}
@@ -602,81 +571,6 @@ function Hierarchy() {
   );
 }
 
-function Consumption() {
-  const { meterId = "MTR-101" } = useParams();
-
-  const query = useQuery({
-    queryKey: ["consumption", meterId],
-    queryFn: () => api.consumption(meterId),
-  });
-
-  return (
-    <>
-      {query.isLoading ? (
-        <Loading />
-      ) : query.isError ? (
-        <Notice
-          message={query.error.message}
-          retry={() => void query.refetch()}
-        />
-      ) : (
-        <>
-          <Link
-            className="back-link"
-            to={`/meters/${encodeURIComponent(meterId)}`}
-          >
-            <ArrowLeft size={16} />
-            Back to meter record
-          </Link>
-
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">METER / CONSUMPTION</p>
-              <h1>Consumption records</h1>
-              <p className="lede">
-                {meterId} · {query.data.unit ?? "Unit not exposed"}
-              </p>
-            </div>
-
-            <span className="count-badge">
-              {query.data.readings.length} readings
-            </span>
-          </div>
-
-          <div className="panel table-panel">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Meter</th>
-                  <th>Unit</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {query.data.readings.map((reading) => (
-                  <tr key={reading.timestamp}>
-                    <td>
-                      {new Date(reading.timestamp)
-                        .toISOString()
-                        .slice(0, 10)}
-                    </td>
-
-                    <td>{meterId}</td>
-                    <td>{query.data.unit ?? "-"}</td>
-                    <td>{reading.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
 function App() {
   return (
     <Shell>
@@ -684,10 +578,6 @@ function App() {
         <Route path="/" element={<Overview />} />
         <Route path="/meters" element={<Meters />} />
         <Route path="/meters/:meterId" element={<MeterDetail />} />
-        <Route
-          path="/meters/:meterId/consumption"
-          element={<Consumption />}
-        />
         <Route path="/hierarchy" element={<Hierarchy />} />
         <Route path="*" element={<Overview />} />
       </Routes>

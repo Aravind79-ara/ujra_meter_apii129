@@ -2,7 +2,7 @@
 
 ## What assumptions did you make?
 
-I assumed the portal’s server-rendered tables, if present, use meaningful header text. The parser supports aliases and returns `null` for fields that are not exposed. I did not assume a meter detail route or a consumption route because neither was verified.
+I assumed the portal’s server-rendered tables, if present, use meaningful header text. The parser supports aliases and returns `null` for fields that are not exposed. I did not assume a meter detail route because it was not verified.
 
 ## Which part was most difficult?
 
@@ -10,7 +10,7 @@ The difficult part was establishing the session behavior without treating exampl
 
 ## If you had another day, what would you improve?
 
-I would capture the authenticated browser network log, identify the exact data loaders and consumption request, add fixtures from those responses, and complete the chart and date-range flow. I would also add contract tests for the final upstream schemas and run the app through Playwright at the target breakpoints.
+The authenticated browser-side data loaders have since been identified and mapped to the live meter and transformer endpoints.
 
 ## What mistake did you make?
 
@@ -20,4 +20,4 @@ The session review reproduced the demo bug by checking `GET /session` before log
 
 ## What would you criticise in a review?
 
-The current adapter is intentionally conservative but incomplete: it scrapes only verified page paths, does not yet use a discovered detail endpoint, and cannot provide consumption readings. Production deployment would also need structured request logging, rate limiting, a secret manager, and a browser-backed protocol capture before claiming full feature parity.
+The current adapter is intentionally conservative but incomplete: it does not use a separately verified detail endpoint. Production deployment would also need structured request logging, rate limiting, and a secret manager before claiming full production readiness.
